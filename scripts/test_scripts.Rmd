@@ -1,15 +1,25 @@
 ---
 title: "test_script"
 author: "Anqi Dai"
-date: "2/22/2019"
-output: html_document
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 library(tidyverse)
 library(pheatmap)
+library(ggpubr)
+library(cowplot)
+library(gridExtra)
 ```
+
+## clustered heatmap
 
 ```{r}
 # load the fake data
@@ -59,7 +69,7 @@ breaks <- seq(0, max_cnt, length.out = 1+length(blue))
 
 ```
 
-```{r POSITIVE}
+```{r} 
 # for the positive strand
 pheatmap(
   positive,
@@ -68,7 +78,7 @@ pheatmap(
   annotation_row = annot,
   annotation_colors = annotCol,
   border_color = NA,
-  treeheight_row = 300,
+  treeheight_row = 100,
   angle_col = 45,
   show_rownames = TRUE,
   show_colnames = TRUE,
@@ -79,9 +89,8 @@ pheatmap(
   filename = '../figs/pos_heatmap.jpg',
   main = 'Positive strand'
 )
-```
 
-```{r NEGATIVE}
+
 # for the negative strand
 pheatmap(
   negative,
@@ -90,7 +99,7 @@ pheatmap(
   annotation_row = annot,
   annotation_colors = annotCol,
   border_color = NA,
-  treeheight_row = 300,
+  treeheight_row = 100,
   angle_col = 45,
   show_rownames = TRUE,
   show_colnames = TRUE,
@@ -101,5 +110,55 @@ pheatmap(
   filename = '../figs/neg_heatmap.jpg',
   main = 'Negative strand'
 )
+```
+
+## Per-bin boxplots
+
+```{r}
+# format the counts table to be in a long format
+
+box_pos <- positive %>%
+  as_tibble %>%
+  rename_all(
+    funs(paste0('b',.))
+  ) %>%
+  gather(key = bin , value = cnt, b0:b99)
+
+box_neg <-  negative %>%
+  as_tibble %>%
+  rename_all(
+    funs(paste0('b',.))
+  ) %>%
+  gather(key = bin , value = cnt, b0:b99)
+```
+
+
+```{r}
+# plot the TPM of each bin as a box plot. the y limit should be 0 to max count too
+
+# the postitive strand
+ggboxplot(box_pos, x = 'bin', y = 'cnt',
+          ggtheme = theme_minimal(),
+          color = '#00468B',
+          xlab = 'Bin', ylab = 'Positive'
+                     )  +
+  ylim(0, max_cnt) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggsave('../figs/boxplot_postive.jpg', width = 20, height = 5, dpi = 300)
+
+# the negative strand
+ggboxplot(box_neg, x = 'bin', y = 'cnt',
+          ggtheme = theme_minimal(),
+          color = '#00468B',
+          xlab = 'Bin', ylab = 'Negative'
+                     )  +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_y_reverse()  + 
+   ylim(max_cnt, 0) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  ggsave('../figs/boxplot_negative.jpg', width = 20, height = 5, dpi = 300)
+
 ```
 
