@@ -137,28 +137,119 @@ box_neg <-  negative %>%
 # plot the TPM of each bin as a box plot. the y limit should be 0 to max count too
 
 # the postitive strand
-ggboxplot(box_pos, x = 'bin', y = 'cnt',
-          ggtheme = theme_minimal(),
+pos_box <- ggboxplot(box_pos, x = 'bin', y = 'cnt',
           color = '#00468B',
-          xlab = 'Bin', ylab = 'Positive'
-                     )  +
+          xlab = 'Bin', ylab = 'Positive')  +
   ylim(0, max_cnt) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  ggsave('../figs/boxplot_postive.jpg', width = 20, height = 5, dpi = 300)
+  theme_bw() +
+  theme(axis.title.x=element_blank()) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # the negative strand
-ggboxplot(box_neg, x = 'bin', y = 'cnt',
-          ggtheme = theme_minimal(),
+neg_box <- ggboxplot(box_neg, x = 'bin', y = 'cnt',
           color = '#00468B',
-          xlab = 'Bin', ylab = 'Negative'
-                     )  +
+          xlab = 'Bin', ylab = 'Negative' )  +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_y_reverse()  + 
    ylim(max_cnt, 0) +
+  theme_bw() +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) +
-  ggsave('../figs/boxplot_negative.jpg', width = 20, height = 5, dpi = 300)
+        axis.ticks.x=element_blank()) 
 
+# now assemble the two plots together in one plot
+ggarrange(pos_box, neg_box, 
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2) +
+  ggsave('../figs/assembled_boxplot.jpg', width = 20, height = 12, dpi = 300)
+
+```
+
+## Differential Lineplot
+
+```{r}
+# the annot table with the group info of the samples
+# the shaded area is the interquantile range
+sample_annot <- annot %>%
+  rownames_to_column() %>%
+  rename(Sample = rowname)
+
+line_pos <- positive %>%
+  as.data.frame() %>%
+    rename_all(
+    funs(paste0('b',.))
+  ) %>%
+  rownames_to_column() %>%
+  rename(Sample =rowname) %>%
+  gather(key = bin , value = cnt, b0:b99) %>%
+  left_join(sample_annot, by = 'Sample')  %>%
+  group_by(Group, bin) %>%
+  summarise(Median = median(cnt),
+            quantile1 = quantile(cnt, 0.25),
+            quantile3 = quantile(cnt, 0.75))
+
+line_neg <- negative %>%
+  as.data.frame() %>%
+    rename_all(
+    funs(paste0('b',.))
+  ) %>%
+  rownames_to_column() %>%
+  rename(Sample =rowname) %>%
+  gather(key = bin , value = cnt, b0:b99) %>%
+  left_join(sample_annot, by = 'Sample')  %>%
+  group_by(Group, bin) %>%
+  summarise(Median = median(cnt),
+            quantile1 = quantile(cnt, 0.25),
+            quantile3 = quantile(cnt, 0.75))
+
+```
+
+```{r}
+# make the differential line plot
+# for positive
+dl_pos <- ggplot(line_pos) + 
+  geom_ribbon(aes(x=bin,
+                  ymin=quantile1,
+                  ymax=quantile3,
+                  group=Group),alpha=0.40,fill="#3985ff") + 
+  geom_line(aes(x=bin,
+                y=Median,
+                group=Group,
+                color=Group),lwd=1) +
+  ylim(0, max_cnt) + 
+  labs(x = 'Bin',
+       y = 'Positive') +
+  theme_bw() +
+  scale_color_manual(values = c('#00468B', '#EC0000'))  +
+  theme(axis.title.x=element_blank()) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# negative strand
+dl_neg <- ggplot(line_neg) + 
+  geom_ribbon(aes(x=bin,
+                  ymin=quantile1,
+                  ymax=quantile3,
+                  group=Group),alpha=0.40,fill="#3985ff") + 
+  geom_line(aes(x=bin,
+                y=Median,
+                group=Group,
+                color=Group),lwd=1) +
+  ylim(0, max_cnt) + 
+  labs(x = 'Bin',
+       y = 'Negative') +
+  theme_bw() +
+  scale_color_manual(values = c('#00468B', '#EC0000'))  +
+  scale_y_reverse()  + 
+  ylim(max_cnt, 0) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) 
+
+
+# now assemble the two plots together in one plot
+ggarrange(dl_pos, dl_neg, 
+          labels = c("A", "B"),
+          ncol = 1, nrow = 2) +
+  ggsave('../figs/assembled_lineplot.jpg', width = 20, height = 12, dpi = 300)
 ```
 
