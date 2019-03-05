@@ -159,7 +159,6 @@ neg_box <- ggboxplot(box_neg, x = 'bin', y = 'cnt',
 
 # now assemble the two plots together in one plot
 ggarrange(pos_box, neg_box, 
-          labels = c("A", "B"),
           ncol = 1, nrow = 2) +
   ggsave('../figs/assembled_boxplot.jpg', width = 20, height = 12, dpi = 300)
 
@@ -221,6 +220,7 @@ dl_pos <- ggplot(line_pos) +
        y = 'Positive') +
   theme_bw() +
   scale_color_manual(values = c('#00468B', '#EC0000'))  +
+  theme(legend.position="none") +
   theme(axis.title.x=element_blank()) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -241,6 +241,7 @@ dl_neg <- ggplot(line_neg) +
   scale_color_manual(values = c('#00468B', '#EC0000'))  +
   scale_y_reverse()  + 
   ylim(max_cnt, 0) +
+  theme(legend.position="bottom") +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank()) 
@@ -248,8 +249,59 @@ dl_neg <- ggplot(line_neg) +
 
 # now assemble the two plots together in one plot
 ggarrange(dl_pos, dl_neg, 
-          labels = c("A", "B"),
           ncol = 1, nrow = 2) +
   ggsave('../figs/assembled_lineplot.jpg', width = 20, height = 12, dpi = 300)
+```
+
+```{r}
+# the negative binomial distribution part
+library(MASS)
+# it's like counts ~ group kind of glm regression
+# the pheno label
+all.equal(rownames(annot) , colnames(pos))
+pheno <- annot$Group
+pos <- as.data.frame(pos)
+# for positive
+pos_reg <- apply(pos, 1, function(Row){
+  ret = summary(glm.nb(as.numeric(Row) ~ pheno))[[12]][2,4]  
+  return(ret)
+}) %>% 
+  as.data.frame %>% 
+  rename(pval = names(.)[1]) %>%
+  mutate(padj = p.adjust(pval, method = 'BH'))
+# the distribution of the padj
+ggplot(pos_reg, aes(padj)) +
+  geom_histogram(bins = 50) + 
+  geom_vline(xintercept = 0.05, linetype="dotted", 
+                color = "red") +
+  geom_vline(xintercept = 0.01, linetype="dashed", 
+                color = "red")
+# how many bins have padj < 0.05
+pos_reg %>%
+  filter(padj < 0.05) %>%
+  nrow
+```
+```{r}
+# for negative strand
+neg <- as.data.frame(neg)
+# for positive
+neg_reg <- apply(neg, 1, function(Row){
+  ret = summary(glm.nb(as.numeric(Row) ~ pheno))[[12]][2,4]  
+  return(ret)
+}) %>% 
+  as.data.frame %>% 
+  rename(pval = names(.)[1]) %>%
+  mutate(padj = p.adjust(pval, method = 'BH'))
+# the distribution of the padj
+ggplot(neg_reg, aes(padj)) +
+  geom_histogram(bins = 50) + 
+  geom_vline(xintercept = 0.05, linetype="dotted", 
+                color = "red") +
+  geom_vline(xintercept = 0.01, linetype="dashed", 
+                color = "red")
+# how many bins have padj < 0.05
+neg_reg %>%
+  filter(padj < 0.05) %>%
+  nrow
 ```
 
