@@ -318,7 +318,7 @@ dl_pos <- ggplot(Dline_pos) +
                 y=Median,
                 group=Group,
                 color=Group)) +
-  geom_text(aes(x=bin, y=star_height, label = significance)) +
+  geom_text(aes(x=bin, y=star_height, label = significance),angle = 90) +
   ylim(0, max_cnt) + 
   labs(x = 'Bin',
        y = 'Positive',
@@ -328,7 +328,8 @@ dl_pos <- ggplot(Dline_pos) +
   scale_color_manual(values = c('#00468B', '#EC0000'))  +
   theme(legend.position="none") +
   theme(axis.title.x=element_blank()) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  theme(text = element_text(size=25)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10)) 
 
 # negative strand
 dl_neg <- ggplot(Dline_neg) + 
@@ -344,7 +345,7 @@ dl_neg <- ggplot(Dline_neg) +
                 y=Median,
                 group=Group,
                 color=Group)) +
-  geom_text(aes(x=bin, y=star_height, label = significance)) +
+  geom_text(aes(x=bin, y=star_height, label = significance),angle = 90) +
   ylim(0, max_cnt) + 
   labs(x = 'Bin',
        y = 'Negative') +
@@ -356,6 +357,7 @@ dl_neg <- ggplot(Dline_neg) +
   theme(legend.position="bottom") +
   theme(axis.title.x=element_blank(),
         axis.ticks.x=element_blank(),
+        text = element_text(size=25),
         axis.text.x=element_blank()) 
 
 
