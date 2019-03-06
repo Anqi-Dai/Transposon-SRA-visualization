@@ -33,7 +33,7 @@ neg <- read_csv('../data/test_data_neg.csv') %>%
 
 
 # get the max number of the two matrix that will be the max value for the two heatmaps
-max_cnt <- max(max(pos), max(neg))
+max_cnt <- max(max(pos), max(neg)) 
 ```
 
 ```{r colors}
@@ -185,7 +185,10 @@ line_pos <- positive %>%
   group_by(Group, bin) %>%
   summarise(Median = median(cnt),
             quantile1 = quantile(cnt, 0.25),
-            quantile3 = quantile(cnt, 0.75))
+            quantile3 = quantile(cnt, 0.75)) %>%
+  mutate(Order = str_replace_all(bin, '^b','')) %>%
+  mutate(Order = as.numeric(Order)) %>%
+  arrange(Order)
 
 line_neg <- negative %>%
   as.data.frame() %>%
@@ -201,57 +204,10 @@ line_neg <- negative %>%
             quantile1 = quantile(cnt, 0.25),
             quantile3 = quantile(cnt, 0.75))
 
+
 ```
 
-```{r}
-# make the differential line plot
-# for positive
-dl_pos <- ggplot(line_pos) + 
-  geom_ribbon(aes(x=bin,
-                  ymin=quantile1,
-                  ymax=quantile3,
-                  group=Group),alpha=0.40,fill="#3985ff") + 
-  geom_line(aes(x=bin,
-                y=Median,
-                group=Group,
-                color=Group),lwd=1) +
-  ylim(0, max_cnt) + 
-  labs(x = 'Bin',
-       y = 'Positive') +
-  theme_bw() +
-  scale_color_manual(values = c('#00468B', '#EC0000'))  +
-  theme(legend.position="none") +
-  theme(axis.title.x=element_blank()) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-# negative strand
-dl_neg <- ggplot(line_neg) + 
-  geom_ribbon(aes(x=bin,
-                  ymin=quantile1,
-                  ymax=quantile3,
-                  group=Group),alpha=0.40,fill="#3985ff") + 
-  geom_line(aes(x=bin,
-                y=Median,
-                group=Group,
-                color=Group),lwd=1) +
-  ylim(0, max_cnt) + 
-  labs(x = 'Bin',
-       y = 'Negative') +
-  theme_bw() +
-  scale_color_manual(values = c('#00468B', '#EC0000'))  +
-  scale_y_reverse()  + 
-  ylim(max_cnt, 0) +
-  theme(legend.position="bottom") +
-  theme(axis.title.x=element_blank(),
-        axis.text.x=element_blank(),
-        axis.ticks.x=element_blank()) 
-
-
-# now assemble the two plots together in one plot
-ggarrange(dl_pos, dl_neg, 
-          ncol = 1, nrow = 2) +
-  ggsave('../figs/assembled_lineplot.jpg', width = 20, height = 12, dpi = 300)
-```
 
 ```{r}
 # the negative binomial distribution part
@@ -270,7 +226,7 @@ pos_reg <- apply(pos, 1, function(Row){
   rename(pval = names(.)[1]) %>%
   mutate(padj = p.adjust(pval, method = 'BH'))
 # the distribution of the padj
-ggplot(pos_reg, aes(padj)) +
+g <- ggplot(pos_reg, aes(padj)) +
   geom_histogram(bins = 50) + 
   geom_vline(xintercept = 0.05, linetype="dotted", 
                 color = "red") +
@@ -281,6 +237,7 @@ pos_reg %>%
   filter(padj < 0.05) %>%
   nrow
 ```
+
 ```{r}
 # for negative strand
 neg <- as.data.frame(neg)
@@ -293,7 +250,7 @@ neg_reg <- apply(neg, 1, function(Row){
   rename(pval = names(.)[1]) %>%
   mutate(padj = p.adjust(pval, method = 'BH'))
 # the distribution of the padj
-ggplot(neg_reg, aes(padj)) +
+g <- ggplot(neg_reg, aes(padj)) +
   geom_histogram(bins = 50) + 
   geom_vline(xintercept = 0.05, linetype="dotted", 
                 color = "red") +
@@ -305,3 +262,105 @@ neg_reg %>%
   nrow
 ```
 
+```{r}
+# the position of the stars should be the max of the two medians and then + 20.
+star_position <- line_pos %>%
+  group_by(bin) %>%
+  summarise(star_height = max(Median) + 20)
+ 
+star_position_neg <- line_neg %>%
+  group_by(bin) %>%
+  summarise(star_height = max(Median) + 20)
+
+# the bins that should annotate with the star signs for the significance level
+pos_reg <- pos_reg %>%
+  mutate(significance = if_else(padj < 0.01, '***', ifelse(padj < 0.05, '**', if_else(padj < 0.1, '*', '')))) %>%
+  mutate(bin = paste0('b', seq(0,99)))%>%
+  full_join(star_position , by = 'bin')
+  
+neg_reg <- neg_reg %>%
+  mutate(significance = if_else(padj < 0.01, '***', ifelse(padj < 0.05, '**', if_else(padj < 0.1, '*', '')))) %>%
+  mutate(bin = paste0('b', seq(0,99))) %>%
+  full_join(star_position_neg , by = 'bin')
+```
+
+```{r}
+# add the significance to the line_pos table
+Dline_pos <- line_pos %>% 
+  left_join(pos_reg %>%
+              dplyr::select(significance, star_height, bin), by = 'bin') %>%
+  mutate(bin = str_replace_all(bin, '^b','')) %>%
+  mutate(bin = as.numeric(bin)) %>%
+  arrange(bin)
+
+Dline_neg <- line_neg %>% 
+  left_join(neg_reg %>%
+              dplyr::select(significance, star_height, bin), by = 'bin')%>%
+  mutate(bin = str_replace_all(bin, '^b','')) %>%
+  mutate(bin = as.numeric(bin)) %>%
+  arrange(bin)
+```
+
+
+```{r} 
+# make the differential line plot
+# for positive
+dl_pos <- ggplot(Dline_pos) + 
+  geom_ribbon(aes(x=bin,
+                  ymin=quantile1,
+                  ymax=quantile3,
+                  group=Group),alpha=0.40,fill="#3985ff") + 
+  geom_line(aes(x=bin,
+                y=Median,
+                group=Group,
+                color=Group),lwd=1) +
+  geom_point(aes(x=bin,
+                y=Median,
+                group=Group,
+                color=Group)) +
+  geom_text(aes(x=bin, y=star_height, label = significance)) +
+  ylim(0, max_cnt) + 
+  labs(x = 'Bin',
+       y = 'Positive',
+       title = 'Differential lineplot') +
+  theme_bw() +
+  scale_x_continuous( breaks = seq(0,99)) +
+  scale_color_manual(values = c('#00468B', '#EC0000'))  +
+  theme(legend.position="none") +
+  theme(axis.title.x=element_blank()) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+# negative strand
+dl_neg <- ggplot(Dline_neg) + 
+  geom_ribbon(aes(x=bin,
+                  ymin=quantile1,
+                  ymax=quantile3,
+                  group=Group),alpha=0.40,fill="#3985ff") + 
+  geom_line(aes(x=bin,
+                y=Median,
+                group=Group,
+                color=Group),lwd=1) +
+  geom_point(aes(x=bin,
+                y=Median,
+                group=Group,
+                color=Group)) +
+  geom_text(aes(x=bin, y=star_height, label = significance)) +
+  ylim(0, max_cnt) + 
+  labs(x = 'Bin',
+       y = 'Negative') +
+  theme_bw() +
+  scale_color_manual(values = c('#00468B', '#EC0000'))  +
+  scale_y_reverse()  + 
+  ylim(max_cnt, 0) +
+  scale_x_continuous( breaks = seq(0,99)) +
+  theme(legend.position="bottom") +
+  theme(axis.title.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.x=element_blank()) 
+
+
+# now assemble the two plots together in one plot
+ggarrange(dl_pos, dl_neg, 
+          ncol = 1, nrow = 2) +
+  ggsave('../figs/assembled_lineplot.jpg', width = 20, height = 12, dpi = 300)
+```
