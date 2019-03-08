@@ -1,0 +1,35 @@
+---
+title: "Make metadata file for testing"
+author: "Anqi Dai"
+date: "3/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+# load the table for testing on one TE
+
+res <- list.files(path = '../data/', pattern = "Nelson", full.names = T) %>%
+  map( function(fn) 
+    read_delim(fn, delim = ' ', col_names = F)  %>%
+    dplyr::select(X8) %>%
+    separate(X8, into = c('SampleFolder','TE'), sep = '/') %>%
+    mutate(Path = str_glue('/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/{SampleFolder}/{TE}'))  %>%
+    mutate(TE = str_replace_all(TE, '^TE@','')) %>%
+    mutate(Status = str_split(SampleFolder, pattern = '_',n = 3,simplify = T)[1]) %>%
+    mutate(Status = factor(Status))  %>%
+    mutate(Sample = str_replace_all(SampleFolder, '_TE$','')) %>%
+    dplyr::select(TE, Sample, Status, Path)) %>%
+  bind_rows
+ 
+res %>%
+  write_csv('../data/testing_TE.csv')
+```
+
