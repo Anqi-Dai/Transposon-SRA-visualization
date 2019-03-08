@@ -5,7 +5,6 @@ date: "`r Sys.Date()`"
 output:
   html_document:
     toc: true
-    toc_float: true
     toc_depth: 3
     code_folding: hide
 ---
@@ -69,7 +68,7 @@ breaks <- seq(0, max_cnt, length.out = 1+length(blue))
 
 ```
 
-```{r} 
+```{r  out.width=900} 
 # for the positive strand
 pheatmap(
   positive,
@@ -86,7 +85,7 @@ pheatmap(
   width = 25,
   cluster_rows = T,
   cluster_cols = F,
-  filename = '../figs/pos_heatmap.jpg',
+  filename = '../figs/pos_heatmap.png',
   main = 'Positive strand'
 )
 
@@ -107,10 +106,22 @@ pheatmap(
   width = 25,
   cluster_rows = T,
   cluster_cols = F,
-  filename = '../figs/neg_heatmap.jpg',
+  filename = '../figs/neg_heatmap.png',
   main = 'Negative strand'
 )
 ```
+
+```{r}
+# combine the above two and make them one figure
+library('magick')
+positive_hm <- image_read('../figs/pos_heatmap.png')
+negative_hm <- image_read('../figs/neg_heatmap.png')
+imgs = c(positive_hm, negative_hm)
+# concatenate them left-to-right (use 'stack=T' to do it top-to-bottom)
+heatmaps = image_append(imgs, stack=T)
+image_write(heatmaps, path = "../figs/heatmaps.jpg", format = "jpg")
+```
+
 
 ## Per-bin boxplots
 
@@ -122,28 +133,31 @@ box_pos <- positive %>%
   rename_all(
     funs(paste0('b',.))
   ) %>%
-  gather(key = bin , value = cnt, b0:b99)
+  gather(key = bin , value = cnt, b0:b99) %>%
+  mutate(bin = str_replace_all(bin, '^b','')) 
 
 box_neg <-  negative %>%
   as_tibble %>%
   rename_all(
     funs(paste0('b',.))
   ) %>%
-  gather(key = bin , value = cnt, b0:b99)
+  gather(key = bin , value = cnt, b0:b99) %>%
+  mutate(bin = str_replace_all(bin, '^b','')) 
 ```
 
 
-```{r}
+```{r  out.width=900}
 # plot the TPM of each bin as a box plot. the y limit should be 0 to max count too
 
 # the postitive strand
 pos_box <- ggboxplot(box_pos, x = 'bin', y = 'cnt',
           color = '#00468B',
-          xlab = 'Bin', ylab = 'Positive')  +
+          xlab = 'Bin', ylab = 'Positive', title = 'Per-bin boxplots')  +
   ylim(0, max_cnt) +
   theme_bw() +
   theme(axis.title.x=element_blank()) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(text = element_text(size=25)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
 
 # the negative strand
 neg_box <- ggboxplot(box_neg, x = 'bin', y = 'cnt',
@@ -155,6 +169,7 @@ neg_box <- ggboxplot(box_neg, x = 'bin', y = 'cnt',
   theme_bw() +
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
+        text = element_text(size=25),
         axis.ticks.x=element_blank()) 
 
 # now assemble the two plots together in one plot
@@ -214,7 +229,7 @@ line_neg <- negative %>%
 library(MASS)
 # it's like counts ~ group kind of glm regression
 # the pheno label
-all.equal(rownames(annot) , colnames(pos))
+#all.equal(rownames(annot) , colnames(pos))
 pheno <- annot$Group
 pos <- as.data.frame(pos)
 # for positive
@@ -233,9 +248,9 @@ g <- ggplot(pos_reg, aes(padj)) +
   geom_vline(xintercept = 0.01, linetype="dashed", 
                 color = "red")
 # how many bins have padj < 0.05
-pos_reg %>%
-  filter(padj < 0.05) %>%
-  nrow
+#pos_reg %>%
+#  filter(padj < 0.05) %>%
+#  nrow
 ```
 
 ```{r}
@@ -257,20 +272,20 @@ g <- ggplot(neg_reg, aes(padj)) +
   geom_vline(xintercept = 0.01, linetype="dashed", 
                 color = "red")
 # how many bins have padj < 0.05
-neg_reg %>%
-  filter(padj < 0.05) %>%
-  nrow
+#neg_reg %>%
+#  filter(padj < 0.05) %>%
+#  nrow
 ```
 
 ```{r}
 # the position of the stars should be the max of the two medians and then + 20.
 star_position <- line_pos %>%
   group_by(bin) %>%
-  summarise(star_height = max(Median) + 20)
+  summarise(star_height = max(Median) + 50)
  
 star_position_neg <- line_neg %>%
   group_by(bin) %>%
-  summarise(star_height = max(Median) + 20)
+  summarise(star_height = max(Median) + 50)
 
 # the bins that should annotate with the star signs for the significance level
 pos_reg <- pos_reg %>%
@@ -302,7 +317,7 @@ Dline_neg <- line_neg %>%
 ```
 
 
-```{r} 
+```{r  out.width=900} 
 # make the differential line plot
 # for positive
 dl_pos <- ggplot(Dline_pos) + 
@@ -318,7 +333,7 @@ dl_pos <- ggplot(Dline_pos) +
                 y=Median,
                 group=Group,
                 color=Group)) +
-  geom_text(aes(x=bin, y=star_height, label = significance),angle = 90) +
+  geom_text(aes(x=bin, y=star_height, label = significance),angle = 90, nudge_x = 0.2) +
   ylim(0, max_cnt) + 
   labs(x = 'Bin',
        y = 'Positive',
@@ -345,7 +360,7 @@ dl_neg <- ggplot(Dline_neg) +
                 y=Median,
                 group=Group,
                 color=Group)) +
-  geom_text(aes(x=bin, y=star_height, label = significance),angle = 90) +
+  geom_text(aes(x=bin, y=star_height, label = significance),angle = 90, nudge_x = 0.2) +
   ylim(0, max_cnt) + 
   labs(x = 'Bin',
        y = 'Negative') +
