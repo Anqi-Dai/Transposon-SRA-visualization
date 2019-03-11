@@ -1,0 +1,41 @@
+---
+title: "Group and split the data"
+author: "Anqi Dai"
+date: "3/8/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+library(tidyverse)
+```
+
+```{r}
+# download the data to local first so that I can test
+# spent a lot of time finally figuring this out 
+
+
+# read the test data
+Test <- read_csv('../data/testing_TE.csv') %>%
+  mutate(localPath = str_replace_all(Path, '/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/','../data/countData/')) %>%
+  mutate(fileContent = map(localPath,  ~ read_tsv(., col_names = F, skip = 1))) %>%
+  unnest %>%
+  dplyr::select(-X1, -Path) %>%
+  rename(bin = X2,  
+         Pos1 = X3,
+         Neg1 = X4,
+         Pos2 = X4,
+         Neg2 = X5,
+         Pos3 = X6,
+         Neg3 = X7) 
+
+# to test on one TE first
+
+pos1 <- Test %>%
+  filter(TE == 'HERV19I:1-5586') %>%
+  dplyr::select(Sample, bin, Pos18_23) %>%
+  spread(key = Sample, value = Pos18_23)
+
+```
+
+
