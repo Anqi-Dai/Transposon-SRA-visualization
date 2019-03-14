@@ -8,8 +8,6 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 library(tidyverse)
-
-
 ```
 
 ```{r}
@@ -41,9 +39,19 @@ input_params <- data_frame(
   Num = rep(Nums, length(TEs))
 )
 
-pmap(input_params, function(TE_name, Num){
-  DF <- Test
-  draw_per_bin_boxpot(TE_name, Num)
+DF <- Test
+
+
+# my task: split a df to make a list of dfs and then map a function that needs 2 inputs on each small df.
+ret <- lapply(list_dfs, function(df){
+  pmap(df, function(TE_name, Num){
+    ret <- draw_per_bin_boxpot(TE_name, Num)
+    
+    ggsave(str_glue('../figs/{TE_name}_boxplot.pdf'), arrangeGrob(ret[TE_name][[1]],ret[[2]],ret[[3]], nrow = 3) ,  width = 20, height = 36, dpi = 300) 
 })
+})
+
 ```
+
+
 
