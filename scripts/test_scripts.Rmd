@@ -18,9 +18,36 @@ library(cowplot)
 library(gridExtra)
 ```
 
+```{r}
+# load the fake data
+pos <- read_csv('../data/test_data_pos.csv') %>%
+  column_to_rownames(var = 'bin') %>%
+  as.matrix()
+neg <- read_csv('../data/test_data_neg.csv') %>%
+  column_to_rownames(var = 'bin') %>%
+  as.matrix()
+# get the max number of the two matrix that will be the max value for the two heatmaps
+max_cnt <- max(max(pos), max(neg)) 
 
+colGradient <- function( cols, length, cmax=255 )
+{ ramp <- colorRamp(cols)
+rgb( ramp(seq(0,1,length=length)), max=cmax )
+}
+yellow <- colGradient(c("#EBEBF3","#4C3C90"),length=15) 
+blue <- colGradient(c("#DAE8F5","#0B559F"),length=15) 
+# Create a heatmap of your genes using the entire training set.
+positive <- t(pos)
+negative <- t(neg)
+sample_names <- rownames(positive)
+annot <- data_frame(
+  Sample =sample_names, 
+  Group = c(rep('Disease', length(sample_names[grepl(pattern = '^D', sample_names)])),
+           rep('Control', length(sample_names[grepl(pattern = '^C', sample_names)])) )
+  ) %>%
+  mutate(Group = factor(Group))%>%
+  column_to_rownames('Sample')
 
-
+```
 
 
 ## Differential Lineplot
@@ -84,6 +111,7 @@ pos_reg <- apply(pos, 1, function(Row){
   as.data.frame %>% 
   rename(pval = names(.)[1]) %>%
   mutate(padj = p.adjust(pval, method = 'BH'))
+
 # the distribution of the padj
 g <- ggplot(pos_reg, aes(padj)) +
   geom_histogram(bins = 50) + 
@@ -108,6 +136,7 @@ neg_reg <- apply(neg, 1, function(Row){
   as.data.frame %>% 
   rename(pval = names(.)[1]) %>%
   mutate(padj = p.adjust(pval, method = 'BH'))
+
 # the distribution of the padj
 g <- ggplot(neg_reg, aes(padj)) +
   geom_histogram(bins = 50) + 
