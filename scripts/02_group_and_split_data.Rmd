@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 library(tidyverse)
+library(gridExtra)
 ```
 
 ```{r}
@@ -50,14 +51,17 @@ list_dfs <- input_params %>%
 
 TE_names <- names(list_dfs)
 
-for(name in TE_names){
+# I need to have a list of two lists, each sub list has three ggplot object
+ret <- lapply(TE_names , function(name) {
   pmap(list_dfs[[name]], function(TE_name, Num){
-    ret <- draw_per_bin_boxpot(TE_name, Num)
+    draw_per_bin_boxpot(TE_name, Num)
   })
-} 
+})
 
-for (name in TE_names){
+names(ret) <- TE_names
+
+sapply(TE_names, function(name){
   ggsave(str_glue('../figs/{name}_boxplot.pdf'), arrangeGrob(ret[[name]][[1]],ret[[name]][[2]],ret[[name]][[3]], nrow = 3) ,  width = 20, height = 36, dpi = 300) 
-} 
+})
 ```
 
