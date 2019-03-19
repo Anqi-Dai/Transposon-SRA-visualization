@@ -254,3 +254,57 @@ ggarrange(dl_pos, dl_neg,
           ncol = 1, nrow = 2) +
   ggsave('../figs/assembled_lineplot.jpg', width = 20, height = 12, dpi = 300)
 ```
+
+
+```{r}
+# to arrange them in one pipeline
+# the fake data in the real data format
+
+pos <- read_csv('../data/test_data_pos.csv') %>%
+  column_to_rownames(var = 'bin') %>%
+  as.matrix() %>%
+  t() %>%
+  as.data.frame() %>%
+    rename_all(
+    funs(paste0('b',.))
+  ) %>%
+  rownames_to_column() %>%
+  rename(Sample =rowname) %>%
+  gather(key = bin , value = cnt, b0:b99) %>%
+  mutate(Group = if_else(grepl(pattern = '^C', Sample), 'Control', 'Disease'))
+
+#  to get the NB stats 
+pos_wide <- pos %>%
+  dplyr::select(-Group) %>%
+  arrange(Sample) %>%
+  spread(key = Sample, value =  cnt ) %>%
+  column_to_rownames('bin')
+
+pheno <- pos %>%
+  group_by(Sample, Group) %>%
+  summarise(count = n()) %>%
+  dplyr::select(-count) %>%
+  arrange(Sample) %>%
+  pull(Group)
+
+pos_reg <- apply(pos_wide, 1, function(Row){
+  ret = summary(glm.nb(as.numeric(Row) ~ pheno))[[12]][2,4]  
+  return(ret)
+}) %>% 
+  as.data.frame %>% 
+  rename(pval = names(.)[1]) %>%
+  mutate(padj = p.adjust(pval, method = 'BH')) %>%
+  mutate(significance = if_else(padj < 0.01, '***', ifelse(padj < 0.05, '**', if_else(padj < 0.1, '*', ''))))
+
+# to get the quantiles
+pos_quant <- pos %>%
+  group_by(Group, bin) %>%
+  summarise(Median = median(cnt),
+            quantile1 = quantile(cnt, 0.25),
+            quantile3 = quantile(cnt, 0.75)) %>%
+  mutate(Order = str_replace_all(bin, '^b','')) %>%
+  mutate(Order = as.numeric(Order)) %>%
+  arrange(Order) 
+  
+```
+
