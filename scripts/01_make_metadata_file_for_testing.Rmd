@@ -23,7 +23,7 @@ res <- list.files(path = '../data/', pattern = "Nelson", full.names = T) %>%
     separate(X8, into = c('SampleFolder','TE'), sep = '/') %>%
     mutate(Path = str_glue('/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/{SampleFolder}/{TE}'))  %>%
     mutate(TE = str_replace_all(TE, '^TE@','')) %>%
-    mutate(Status = str_split(SampleFolder, pattern = '_',n = 3,simplify = T)[1]) %>%
+    mutate(Status = if_else(grepl(pattern = '^C', SampleFolder), 'Control', if_else(grepl(pattern = '^P', SampleFolder), 'Parkinsons','Huntingtons'))) %>%
     mutate(Status = factor(Status))  %>%
     mutate(Sample = str_replace_all(SampleFolder, '_TE$','')) %>%
     dplyr::select(TE, Sample, Status, Path)) %>%
@@ -31,5 +31,7 @@ res <- list.files(path = '../data/', pattern = "Nelson", full.names = T) %>%
  
 res %>%
   write_csv('../data/testing_TE.csv')
+
+
 ```
 
