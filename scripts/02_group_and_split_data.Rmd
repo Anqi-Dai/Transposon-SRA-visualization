@@ -16,7 +16,7 @@ library(gridExtra)
 # spent a lot of time finally figuring this out 
 # read the test data
 Test <- read_csv('../data/testing_TE.csv') %>%
-  mutate(localPath = str_replace_all(Path, '/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/','../data/countData/')) %>%
+  mutate(localPath = str_replace_all(Path, '/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/','../data/allTest/')) %>%
   mutate(fileContent = map(localPath,  ~ read_tsv(., col_names = F, skip = 1))) %>%
   unnest %>%
   dplyr::select(-X1, -Path) %>%
@@ -27,6 +27,22 @@ Test <- read_csv('../data/testing_TE.csv') %>%
          Neg2 = X6,
          Pos3 = X7,
          Neg3 = X8)
+
+summa <- Test %>%
+  group_by(TE, Sample) %>%
+  summarise(sP1 = sum(Pos1),
+            sN1 = sum(Neg1),
+            sP2 = sum(Pos2),
+            sN2 = sum(Neg2),
+            sP3 = sum(Pos3),
+            sN3 = sum(Neg3)) %>%
+  group_by(TE) %>%
+  summarise(sP1 = sum(sP1),
+            sN1 = sum(sN1),
+            sP2 = sum(sP2),
+            sN2 = sum(sN2),
+            sP3 = sum(sP3),
+            sN3 = sum(sN3))
 
 TEs <- names(table(Test$TE))
 Nums <- seq(1,3)

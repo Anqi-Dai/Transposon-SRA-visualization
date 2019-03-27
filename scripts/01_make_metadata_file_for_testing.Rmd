@@ -15,19 +15,25 @@ library(tidyverse)
 
 ```{r}
 # load the table for testing on one TE
+# select the two most abundant TE for testing 'ALU:1-312' and 'HERV49I:1-6331'
+# and only use the control and HD now
 
-res <- list.files(path = '../data/', pattern = "Nelson", full.names = T) %>%
-  map( function(fn) 
-    read_delim(fn, delim = ' ', col_names = F)  %>%
-    dplyr::select(X8) %>%
-    separate(X8, into = c('SampleFolder','TE'), sep = '/') %>%
+
+ret <-list.files('../data/allTest/')
+
+TEs <- c( 'TE@ALU:1-312', 'TE@HERV49I:1-6331')
+RET <- apply(expand.grid(ret, TEs), 1, paste, collapse="/")
+
+
+res <- data_frame(folderName = RET) %>%
+    separate(folderName, into = c('SampleFolder','TE'), sep = '/') %>%
     mutate(Path = str_glue('/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/{SampleFolder}/{TE}'))  %>%
     mutate(TE = str_replace_all(TE, '^TE@','')) %>%
     mutate(Status = if_else(grepl(pattern = '^C', SampleFolder), 'Control', if_else(grepl(pattern = '^P', SampleFolder), 'Parkinsons','Huntingtons'))) %>%
     mutate(Status = factor(Status))  %>%
     mutate(Sample = str_replace_all(SampleFolder, '_TE$','')) %>%
-    dplyr::select(TE, Sample, Status, Path)) %>%
-  bind_rows
+    filter(Status != 'Parkinsons') %>%
+    dplyr::select(TE, Sample, Status, Path)
  
 res %>%
   write_csv('../data/testing_TE.csv')

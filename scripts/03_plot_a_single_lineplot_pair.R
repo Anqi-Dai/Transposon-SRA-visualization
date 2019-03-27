@@ -3,31 +3,25 @@
 library(tidyverse)
 library(ggpubr)
 library(MASS)
+# HERV49I:1-6331
 
 draw_differential_line_plot <- function(TE_name, Num) {
 
   # the annot table with the group info of the samples
   # the shaded area is the interquantile range
-  sample_annot <- annot %>%
-    rownames_to_column() %>%
-    rename(Sample = rowname)
   
-  line_pos <- positive %>%
-    as.data.frame() %>%
-    rename_all(
-      funs(paste0('b',.))
-    ) %>%
-    rownames_to_column() %>%
-    rename(Sample =rowname) %>%
-    gather(key = bin , value = cnt, b0:b99) %>%
-    left_join(sample_annot, by = 'Sample')  %>%
-    group_by(Group, bin) %>%
+  DF <- Test %>%
+    filter(TE == 'ALU:1-312' ) %>%
+    dplyr::select( Status, bin, Pos1, Neg1)
+  
+
+  line_pos <- DF %>%
+    dplyr::select(-Neg1,  cnt = Pos1) %>%
+    group_by(Status, bin) %>%
     summarise(Median = median(cnt),
               quantile1 = quantile(cnt, 0.25),
-              quantile3 = quantile(cnt, 0.75)) %>%
-    mutate(Order = str_replace_all(bin, '^b','')) %>%
-    mutate(Order = as.numeric(Order)) %>%
-    arrange(Order)
+              quantile3 = quantile(cnt, 0.75))
+
   
   line_neg <- negative %>%
     as.data.frame() %>%
