@@ -1,93 +1,100 @@
 # This script will plot a single clustered heatmap pair(positive and negative) using two input files, each has rows as bins and columns as samples.
-setwd('scripts/')
+
 library(magick)
 library(tidyverse)
 library(pheatmap)
 
-# load the fake data
-pos <- read_csv('../data/test_data_pos.csv') %>%
-  column_to_rownames(var = 'bin') %>%
-  as.matrix()
-
-neg <- read_csv('../data/test_data_neg.csv') %>%
-  column_to_rownames(var = 'bin') %>%
-  as.matrix()
-
-
-# get the max number of the two matrix that will be the max value for the two heatmaps
-max_cnt <- max(max(pos), max(neg)) 
-
+# for the color palette 
 colGradient <- function( cols, length, cmax=255 )
 { ramp <- colorRamp(cols)
 rgb( ramp(seq(0,1,length=length)), max=cmax )
 }
 
-yellow <- colGradient(c("#EBEBF3","#4C3C90"),length=15) 
+# prepare the count table to draw
+prepare_table_for_heatmap <- function(TE_name, StrandNum){
+  DF <- Test
+  
+  all_table <- DF %>%
+    filter(TE == TE_name) %>%
+    dplyr::select(Sample, Status, bin, cnt = StrandNum)
+  
+  cnt_wide <-  all_table %>%
+    dplyr::select(Sample, bin, cnt) %>%
+    spread(key = Sample, value =  cnt ) %>%
+    column_to_rownames('bin') %>%
+    t
+  return(cnt_wide)
+}
 
-blue <- colGradient(c("#DAE8F5","#0B559F"),length=15) 
+draw_clustered_heatmap <- function(TE_name, Num){
+  
+  #*********************
+  TE_name = 'ALU:1-312'
+  Num = 1
+  #*********************
+  
+  POS_table <- prepare_table_for_heatmap(TE_name, str_glue('Pos{Num}'))
+  NEG_table <- prepare_table_for_heatmap(TE_name, str_glue('Neg{Num}'))
+  
+  max_cnt <- max(max(POS_table), max(NEG_table)) 
+  
+  # the color scale for the heatmap
+  yellow <- colGradient(c("#EBEBF3","#4C3C90"),length=9) 
+  blue <- colGradient(c("#DAE8F5","#0B559F"),length=9) 
+  
+  # the palette for the Status variable in the legend
+  annotCol <- list(Status = c('#42B440', '#EC0000'))
+  names(annotCol$Status) = c('Control','Huntingtons')
+  
+  # breaks : which set the limit of the count and color mapping relationship
+  breaks <- seq(0, max_cnt, length.out = 1+length(blue))
+  
+  # the df linking the sample and its corresponding group
+  annot <- data_frame(
+    Sample = rownames(POS_table)
+  ) %>%
+    full_join(all_table %>%
+                distinct(Sample, .keep_all = T) %>%
+                dplyr::select(Sample, Status), by = 'Sample') %>%
+    mutate(Status = factor(Status))%>%
+    column_to_rownames('Sample')
+  
+  # draw heatmap for the positive strand
+  pheatmap(
+    POS_table,
+    color= blue, 
+    breaks = breaks,annotation_row = annot,annotation_colors = annotCol,
+    border_color = NA,treeheight_row = 100,angle_col = 45,
+    show_rownames = TRUE,show_colnames = TRUE,
+    height = 15,width = 20,
+    cluster_rows = T,cluster_cols = F,
+    fontsize = 20, fontsize_row=15,
+    main = if_else(Num == 1, str_glue('{TE_name} length 18-23nt clustered heatmap'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt clustered heatmap'), str_glue('{TE_name} any length clustered heatmap'))),
+    filename = 'figs/000pos_heatmap.test.png'
+  )
+  # for the negative strand
+  pheatmap(
+    NEG_table,
+    color= yellow, 
+    breaks = breaks,annotation_row = annot,annotation_colors = annotCol,
+    border_color = NA,treeheight_row = 100,angle_col = 45,
+    show_rownames = TRUE,show_colnames = TRUE,
+    height = 15,width = 20,
+    cluster_rows = T,cluster_cols = F,
+    fontsize = 20, fontsize_row=15,
+    filename = 'figs/000neg_heatmap.test.png'
+  )
+  
+}
 
-# Create a heatmap of your genes using the entire training set.
-positive <- t(pos)
-negative <- t(neg)
-
-sample_names <- rownames(positive)
-
-annot <- data_frame(
-  Sample =sample_names, 
-  Group = c(rep('Disease', length(sample_names[grepl(pattern = '^D', sample_names)])),
-            rep('Control', length(sample_names[grepl(pattern = '^C', sample_names)])) )
-) %>%
-  mutate(Group = factor(Group))%>%
-  column_to_rownames('Sample')
-
-# the palette for the Group variable
-annotCol <- list(Group = c('#42B440', '#EC0000'))
-names(annotCol$Group) = c('Control','Disease')
-
-# breaks : which set the limit of the count and color mapping relationship
-breaks <- seq(0, max_cnt, length.out = 1+length(blue))
 
 
-# for the positive strand
-pheatmap(
-  positive,
-  color= blue, 
-  breaks = breaks,
-  annotation_row = annot,
-  annotation_colors = annotCol,
-  border_color = NA,
-  treeheight_row = 100,
-  angle_col = 45,
-  show_rownames = TRUE,
-  show_colnames = TRUE,
-  height = 5,
-  width = 25,
-  cluster_rows = T,
-  cluster_cols = F,
-  filename = '../figs/pos_heatmap.png',
-  main = 'Positive strand'
-)
 
 
-# for the negative strand
-pheatmap(
-  negative,
-  color= yellow, 
-  breaks = breaks,
-  annotation_row = annot,
-  annotation_colors = annotCol,
-  border_color = NA,
-  treeheight_row = 100,
-  angle_col = 45,
-  show_rownames = TRUE,
-  show_colnames = TRUE,
-  height = 5,
-  width = 25,
-  cluster_rows = T,
-  cluster_cols = F,
-  filename = '../figs/neg_heatmap.png',
-  main = 'Negative strand'
-)
+
+
+
+
 
 
 # combine the above two and make them one figure
@@ -98,4 +105,6 @@ imgs = c(positive_hm, negative_hm)
 # concatenate them left-to-right (use 'stack=T' to do it top-to-bottom)
 heatmaps = image_append(imgs, stack=T)
 image_write(heatmaps, path = "../figs/heatmaps.jpg", format = "jpg")
-```
+
+
+
