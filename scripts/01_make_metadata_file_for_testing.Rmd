@@ -21,7 +21,7 @@ library(tidyverse)
 
 ret <-list.files('../data/allTest/')
 
-TEs <- c( 'TE@ALU:1-312', 'TE@HERV49I:1-6331')
+TEs <- c( 'TE@ALU:1-312', 'TE@L1HS:1-6064')
 RET <- apply(expand.grid(ret, TEs), 1, paste, collapse="/")
 
 

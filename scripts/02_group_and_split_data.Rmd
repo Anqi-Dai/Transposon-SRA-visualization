@@ -26,12 +26,12 @@ Test <- read_csv('../data/testing_TE.csv') %>%
          Pos2 = X5,
          Neg2 = X6,
          Pos3 = X7,
-         Neg3 = X8)
-
-Test <- Test %>%
+         Neg3 = X8) %>%
   mutate(Neg1 = abs(Neg1),
          Neg2 = abs(Neg2),
          Neg3 = abs(Neg3))
+
+
 
 TEs <- names(table(Test$TE))
 Nums <- seq(1,3)
@@ -70,7 +70,20 @@ sapply(TE_names, function(name){
 })
 ```
 
-```{r}
+```{r lineplot}
+source('03_plot_a_single_lineplot_pair.R')
 
+# I need to have a list of two lists, each sub list has three ggplot object
+ret <- lapply(TE_names , function(name) {
+  pmap(list_dfs[[name]], function(TE_name, Num){
+    draw_differential_line_plot(TE_name, Num)
+  })
+})
+
+names(ret) <- TE_names
+
+sapply(TE_names, function(name){
+  ggsave(str_glue('../figs/{name}_lineplot.pdf'), arrangeGrob(ret[[name]][[1]],ret[[name]][[2]],ret[[name]][[3]], nrow = 3) ,  width = 20, height = 36, dpi = 300) 
+})
 ```
 
