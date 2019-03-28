@@ -3,6 +3,7 @@
 library(tidyverse)
 library(ggpubr)
 library(MASS)
+library(scales)
 
 # the function to generate the table for plotting since the pos and neg have many things in common
 prepare_table_for_plotting <- function(TE_name, StrandNum) {
@@ -20,11 +21,11 @@ prepare_table_for_plotting <- function(TE_name, StrandNum) {
               quantile1 = quantile(cnt, 0.25),
               quantile3 = quantile(cnt, 0.75))
   
-  # the position of the stars should be the max of the two medians and then + 10% of the median of each medians.
+  # the position of the stars should be the max of the two medians and then +  the median of each medians.
   defined_star_height <- ribbon_part %>%
     group_by(bin) %>%
     summarise(star_height = max(Median) ) %>%
-    summarise(star_height = median(star_height)*0.1) %>%
+    summarise(star_height = median(star_height)*4) %>%
     pull(star_height)
   
   star_position_part <-  ribbon_part %>%
@@ -44,7 +45,7 @@ prepare_table_for_plotting <- function(TE_name, StrandNum) {
     column_to_rownames('bin')
   
   regression_part <- apply(cnt_wide, 1, function(Row){
-    fit <- try(suppressWarnings(glm.nb(as.numeric(Row) ~ pheno)))
+    fit <- try(glm.nb(as.numeric(Row) ~ pheno))
     if(is(fit, "try-error")) return(1) else return(summary(fit)[[12]][2,4]) 
   }) %>% 
     as.data.frame %>% 
@@ -88,8 +89,7 @@ draw_differential_line_plot <- function(TE_name, Num) {
                    y=Median,
                    group=Status,
                    color=Status)) +
-    geom_text(aes(x=bin, y=star_height, label = significance),angle = 90, nudge_x = 0.2) +
-    ylim(0, max_cnt) + 
+    geom_text(aes(x=bin, y=star_height, label = significance),angle = 90, nudge_x = 0) +
     labs(x = 'Bin',
          y = 'Positive',
          title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt differential lineplot'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt differential lineplot'), str_glue('{TE_name} any length differential lineplots')))) +
@@ -97,6 +97,9 @@ draw_differential_line_plot <- function(TE_name, Num) {
     scale_x_continuous( breaks = POS_table$bin) +
     scale_color_manual(values = c('#00468B', '#EC0000'))  +
     scale_fill_manual(values = c('#00468B', '#EC0000'))  +
+    yscale("log10", .format = TRUE) +
+    ylim(0, max_cnt) + 
+    
     theme(legend.position='top', 
           legend.justification='right',
           legend.direction='horizontal') +
@@ -105,6 +108,7 @@ draw_differential_line_plot <- function(TE_name, Num) {
           plot.margin = margin(20,20,20,20)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
   
+  ###########################################################################
   # negative strand
   dl_neg <- ggplot(NEG_table) + 
     geom_ribbon(aes(x=bin,
@@ -127,8 +131,9 @@ draw_differential_line_plot <- function(TE_name, Num) {
     scale_color_manual(values = c('#00468B', '#EC0000'))  +
     scale_fill_manual(values = c('#00468B', '#EC0000'))  +
     #scale_y_reverse()  + 
-    ylim(max_cnt, 0) +
     scale_x_continuous( breaks = NEG_table$bin)  +
+    yscale("log10", .format = TRUE) +
+    ylim(max_cnt, 0) +
     theme(axis.title.x=element_blank(),
           axis.ticks.x=element_blank(),
           text = element_text(size=25),

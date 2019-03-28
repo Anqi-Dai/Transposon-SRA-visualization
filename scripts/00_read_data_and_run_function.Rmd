@@ -15,6 +15,8 @@ library(gridExtra)
 # download the data to local first so that I can test
 # spent a lot of time finally figuring this out 
 # read the test data
+million <- 10^6
+
 Test <- read_csv('../data/testing_TE.csv') %>%
   mutate(localPath = str_replace_all(Path, '/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/','../data/allTest/')) %>%
   mutate(fileContent = map(localPath,  ~ read_tsv(., col_names = F, skip = 1))) %>%
@@ -27,9 +29,12 @@ Test <- read_csv('../data/testing_TE.csv') %>%
          Neg2 = X6,
          Pos3 = X7,
          Neg3 = X8) %>%
-  mutate(Neg1 = abs(Neg1),
-         Neg2 = abs(Neg2),
-         Neg3 = abs(Neg3))
+  mutate(Pos1 = Pos1*million,
+         Neg1 = abs(Neg1)*million,
+         Pos2 = Pos2*million,
+         Neg2 = abs(Neg2)*million,
+         Pos3 = Pos3*million,
+         Neg3 = abs(Neg3)*million)
 
 
 
@@ -83,7 +88,7 @@ ret <- lapply(TE_names , function(name) {
 names(ret) <- TE_names
 
 sapply(TE_names, function(name){
-  ggsave(str_glue('../figs/{name}_heatmap.pdf'), arrangeGrob(ret[[name]][[1]],ret[[name]][[2]],ret[[name]][[3]], nrow = 3),width = 20, height = 72, dpi = 300, limitsize = FALSE) 
+  ggsave(str_glue('../figs/{name}_heatmap.pdf'), arrangeGrob(ret[[name]][[1]],ret[[name]][[2]],ret[[name]][[3]], nrow = 3), width = 20, height = 72, dpi = 300, limitsize = FALSE) 
 })
 ```
 
