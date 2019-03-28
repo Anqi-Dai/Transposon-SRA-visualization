@@ -41,7 +41,7 @@ draw_clustered_heatmap <- function(TE_name, Num){
   blue <- colGradient(c("#DAE8F5","#0B559F"),length=9) 
   
   # the palette for the Status variable in the legend
-  annotCol <- list(Status = c('#42B440', '#EC0000'))
+  annotCol <- list(Status = c('#00468B', '#EC0000'))
   names(annotCol$Status) = c('Control','Huntingtons')
   
   # breaks : which set the limit of the count and color mapping relationship
