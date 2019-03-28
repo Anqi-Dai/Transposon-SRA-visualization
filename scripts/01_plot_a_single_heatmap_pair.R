@@ -3,6 +3,7 @@
 library(magick)
 library(tidyverse)
 library(pheatmap)
+library(gridExtra)
 
 # for the color palette 
 colGradient <- function( cols, length, cmax=255 )
@@ -28,10 +29,7 @@ prepare_table_for_heatmap <- function(TE_name, StrandNum){
 
 draw_clustered_heatmap <- function(TE_name, Num){
   
-  #*********************
-  TE_name = 'ALU:1-312'
-  Num = 1
-  #*********************
+
   
   POS_table <- prepare_table_for_heatmap(TE_name, str_glue('Pos{Num}'))
   NEG_table <- prepare_table_for_heatmap(TE_name, str_glue('Neg{Num}'))
@@ -60,7 +58,7 @@ draw_clustered_heatmap <- function(TE_name, Num){
     column_to_rownames('Sample')
   
   # draw heatmap for the positive strand
-  pheatmap(
+  pos_hm <- pheatmap(
     POS_table,
     color= blue, 
     breaks = breaks,annotation_row = annot,annotation_colors = annotCol,
@@ -68,12 +66,11 @@ draw_clustered_heatmap <- function(TE_name, Num){
     show_rownames = TRUE,show_colnames = TRUE,
     height = 15,width = 20,
     cluster_rows = T,cluster_cols = F,
-    fontsize = 20, fontsize_row=15,
-    main = if_else(Num == 1, str_glue('{TE_name} length 18-23nt clustered heatmap'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt clustered heatmap'), str_glue('{TE_name} any length clustered heatmap'))),
-    filename = 'figs/000pos_heatmap.test.png'
+    fontsize = 20, fontsize_row=15,fontsize_col=10,
+    main = if_else(Num == 1, str_glue('{TE_name} length 18-23nt POSITIVE STRAND clustered heatmap'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt POSITIVE STRAND clustered heatmap'), str_glue('{TE_name} any length POSITIVE STRAND clustered heatmap')))
   )
   # for the negative strand
-  pheatmap(
+  neg_hm <- pheatmap(
     NEG_table,
     color= yellow, 
     breaks = breaks,annotation_row = annot,annotation_colors = annotCol,
@@ -81,30 +78,20 @@ draw_clustered_heatmap <- function(TE_name, Num){
     show_rownames = TRUE,show_colnames = TRUE,
     height = 15,width = 20,
     cluster_rows = T,cluster_cols = F,
-    fontsize = 20, fontsize_row=15,
-    filename = 'figs/000neg_heatmap.test.png'
+    fontsize = 20, fontsize_row=15,fontsize_col=10,
+    main = if_else(Num == 1, str_glue('{TE_name} length 18-23nt NEGATIVE STRAND clustered heatmap'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt NEGATIVE STRAND clustered heatmap'), str_glue('{TE_name} any length NEGATIVE STRAND clustered heatmap')))
   )
   
+  ret <- ggarrange(pos_hm[[4]], neg_hm[[4]], 
+                   ncol = 1, nrow = 2) 
+  return(ret)
 }
 
-
-
-
-
-
-
-
-
-
-
-# combine the above two and make them one figure
-
-positive_hm <- image_read('../figs/pos_heatmap.png')
-negative_hm <- image_read('../figs/neg_heatmap.png')
-imgs = c(positive_hm, negative_hm)
-# concatenate them left-to-right (use 'stack=T' to do it top-to-bottom)
-heatmaps = image_append(imgs, stack=T)
-image_write(heatmaps, path = "../figs/heatmaps.jpg", format = "jpg")
+#*********************
+#TE_name = 'ALU:1-312'
+#Num = 1
+#*********************
+#ret <- draw_clustered_heatmap(TE_name, Num)
 
 
 

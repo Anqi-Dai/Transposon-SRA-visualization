@@ -70,6 +70,24 @@ sapply(TE_names, function(name){
 })
 ```
 
+
+```{r heatmap}
+source('01_plot_a_single_heatmap_pair.R')
+
+ret <- lapply(TE_names , function(name) {
+  pmap(list_dfs[[name]], function(TE_name, Num){
+    draw_clustered_heatmap(TE_name, Num)
+  })
+})
+
+names(ret) <- TE_names
+
+sapply(TE_names, function(name){
+  ggsave(str_glue('../figs/{name}_heatmap.pdf'), arrangeGrob(ret[[name]][[1]],ret[[name]][[2]],ret[[name]][[3]], nrow = 3),width = 20, height = 72, dpi = 300, limitsize = FALSE) 
+})
+```
+
+
 ```{r lineplot}
 source('03_plot_a_single_lineplot_pair.R')
 
