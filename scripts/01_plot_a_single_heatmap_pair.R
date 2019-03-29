@@ -45,7 +45,7 @@ draw_clustered_heatmap <- function(TE_name, Num){
   names(annotCol$Status) = c('Control','Huntingtons')
   
   # breaks : which set the limit of the count and color mapping relationship
-  breaks <- seq(0, max_cnt, length.out = 1+length(blue))
+  #breaks <- seq(0, max_cnt, length.out = 1+length(blue))
   
   # the df linking the sample and its corresponding group
   annot <- data_frame(
@@ -61,7 +61,8 @@ draw_clustered_heatmap <- function(TE_name, Num){
   pos_hm <- pheatmap(
     POS_table,
     color= blue, 
-    breaks = breaks,annotation_row = annot,annotation_colors = annotCol,
+    #breaks = breaks,
+    annotation_row = annot,annotation_colors = annotCol,
     border_color = NA,treeheight_row = 100,angle_col = 45,
     show_rownames = TRUE,show_colnames = TRUE,
     height = 15,width = 20,
@@ -73,7 +74,8 @@ draw_clustered_heatmap <- function(TE_name, Num){
   neg_hm <- pheatmap(
     NEG_table,
     color= yellow, 
-    breaks = breaks,annotation_row = annot,annotation_colors = annotCol,
+    #breaks = breaks,
+    annotation_row = annot,annotation_colors = annotCol,
     border_color = NA,treeheight_row = 100,angle_col = 45,
     show_rownames = TRUE,show_colnames = TRUE,
     height = 15,width = 20,

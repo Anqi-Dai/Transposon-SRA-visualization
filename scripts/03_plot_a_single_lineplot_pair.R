@@ -1,13 +1,18 @@
 ## Differential line plots
 # make this a plotting a function
 library(tidyverse)
-library(ggpubr)
-library(MASS)
-library(scales)
+library(edgeR)
 
-# the function to generate the table for plotting since the pos and neg have many things in common
+#########################################################################
+# the function to generate the table for plotting since the pos and neg have 
+# many things in common
+#########################################################################
 prepare_table_for_plotting <- function(TE_name, StrandNum) {
   DF <- Test
+  
+  # TE_name <- 'ALU:1-312'
+  # TE_name <-'L1HS:1-6064'
+  # StrandNum <- 'Pos1'
   
   all_table <- DF %>%
     filter(TE == TE_name) %>%
@@ -34,7 +39,7 @@ prepare_table_for_plotting <- function(TE_name, StrandNum) {
   
   # the regression part
   # it's like counts ~ group kind of glm regression
-  pheno <- all_table %>%
+  group <- all_table %>%
     arrange(Sample) %>%
     distinct(Sample, .keep_all = T) %>%
     pull(Status)
@@ -44,26 +49,31 @@ prepare_table_for_plotting <- function(TE_name, StrandNum) {
     spread(key = Sample, value =  cnt ) %>%
     column_to_rownames('bin')
   
-  regression_part <- apply(cnt_wide, 1, function(Row){
-    fit <- try(glm.nb(as.numeric(Row) ~ pheno))
-    if(is(fit, "try-error")) return(1) else return(summary(fit)[[12]][2,4]) 
-  }) %>% 
-    as.data.frame %>% 
-    mutate(bin = as.numeric(rownames(cnt_wide))) %>%
-    rename(pval = names(.)[1]) %>%
-    mutate(padj = p.adjust(pval, method = 'BH')) %>%
-    mutate(significance = if_else(padj < 0.01, '***', ifelse(padj < 0.05, '**', if_else(padj < 0.1, '*', '')))) %>%
+ 
+  # use the edgeR package to do the Negative Binomial regression
+  y <- DGEList(counts=cnt_wide,group=group)
+  design <- model.matrix(~group)
+  y <- estimateDisp(y,design)
+  fit <- glmQLFit(y,design)
+  qlf <- glmQLFTest(fit,coef=2)
+  
+  regression_part <- topTags(qlf, n = nrow(cnt_wide),  sort.by = "none")$table %>%
+    mutate(bin = as.numeric(rownames(.))) %>%
+    mutate(significance = if_else(FDR < 0.01, '***', ifelse(FDR < 0.05, '**', if_else(FDR < 0.1, '*', '')))) %>%
+    dplyr::select(bin, FDR, significance) %>%
     full_join(star_position_part , by = 'bin')
   
   # add the regression part to the ribbon part
-  final <- ribbon_part %>% 
+  final <- ribbon_part %>%
     left_join(regression_part %>%
-                dplyr::select(significance, star_height, bin), by = 'bin') 
+                dplyr::select(significance, star_height, bin), by = 'bin')
   return(final)
 }
 
-
+#########################################################################
 # the actual function to draw the plot
+#########################################################################
+
 draw_differential_line_plot <- function(TE_name, Num) {
   
   POS_table <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
@@ -97,9 +107,6 @@ draw_differential_line_plot <- function(TE_name, Num) {
     scale_x_continuous( breaks = POS_table$bin) +
     scale_color_manual(values = c('#00468B', '#EC0000'))  +
     scale_fill_manual(values = c('#00468B', '#EC0000'))  +
-    yscale("log10", .format = TRUE) +
-    ylim(0, max_cnt) + 
-    
     theme(legend.position='top', 
           legend.justification='right',
           legend.direction='horizontal') +
@@ -130,18 +137,16 @@ draw_differential_line_plot <- function(TE_name, Num) {
     theme_bw() +
     scale_color_manual(values = c('#00468B', '#EC0000'))  +
     scale_fill_manual(values = c('#00468B', '#EC0000'))  +
-    #scale_y_reverse()  + 
     scale_x_continuous( breaks = NEG_table$bin)  +
-    yscale("log10", .format = TRUE) +
-    ylim(max_cnt, 0) +
-    theme(axis.title.x=element_blank(),
-          axis.ticks.x=element_blank(),
+    scale_y_reverse()  + 
+    theme(legend.position='none', 
+          axis.title.x=element_blank(),
           text = element_text(size=25),
-          legend.position='none', 
-          plot.margin = margin(20,20,20,20),
-          axis.text.x=element_blank())  
+          axis.text.x=element_blank(),
+          axis.ticks.x=element_blank(),
+          plot.margin = margin(20,20,20,20)
+         )  
    
-  
   
   # now assemble the two plots together in one plot
   ret <- ggarrange(dl_pos, dl_neg, 
@@ -149,6 +154,10 @@ draw_differential_line_plot <- function(TE_name, Num) {
   return(ret)
   }
 
-#prepare_table_for_plotting('HERV49I:1-6331', 'Pos1')
 
-#draw_differential_line_plot('HERV49I:1-6331', 1) +ggsave('figs/test.line.jpg',  width = 20, height = 12, dpi = 300)
+# test the function
+TE_name <- 'ALU:1-312'
+Num <- 1
+#test <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
+
+#draw_differential_line_plot(TE_name, Num) + ggsave('figs/test.line.jpg',  width = 20, height = 12, dpi = 300)

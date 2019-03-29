@@ -25,9 +25,7 @@ draw_per_bin_boxpot <- function(TE_name, Num) {
                        color = '#00468B',
                        xlab = 'Bin', ylab = 'Positive', 
                        title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt per-bin boxplots'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt per-bin boxplots'), str_glue('{TE_name} any length per-bin boxplots')))) +
-    ylim(0, max_cnt) +
     theme_bw() +
-    yscale("log10", .format = TRUE) +
     theme(axis.title.x=element_blank(),
           text = element_text(size=25),
           plot.margin = margin(20,20,20,20),
@@ -38,9 +36,7 @@ draw_per_bin_boxpot <- function(TE_name, Num) {
                        color = '#00468B',
                        xlab = 'Bin', ylab = 'Negative' )  +
     scale_y_reverse()  + 
-    ylim(max_cnt, 0) +
     theme_bw() +
-    yscale("log10", .format = TRUE) +
     theme(axis.title.x=element_blank(),
           axis.text.x=element_blank(),
           plot.margin = margin(20,20,20,20),
