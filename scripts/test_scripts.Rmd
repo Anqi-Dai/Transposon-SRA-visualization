@@ -12,41 +12,42 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 library(tidyverse)
-library(pheatmap)
 library(ggpubr)
-library(cowplot)
-library(gridExtra)
+library(edgeR)
 ```
 
 ```{r}
 # load the fake data
 pos <- read_csv('../data/test_data_pos.csv') %>%
-  column_to_rownames(var = 'bin') %>%
-  as.matrix()
+  column_to_rownames(var = 'bin')
+
 neg <- read_csv('../data/test_data_neg.csv') %>%
-  column_to_rownames(var = 'bin') %>%
-  as.matrix()
-# get the max number of the two matrix that will be the max value for the two heatmaps
-max_cnt <- max(max(pos), max(neg)) 
-
-colGradient <- function( cols, length, cmax=255 )
-{ ramp <- colorRamp(cols)
-rgb( ramp(seq(0,1,length=length)), max=cmax )
-}
-yellow <- colGradient(c("#EBEBF3","#4C3C90"),length=15) 
-blue <- colGradient(c("#DAE8F5","#0B559F"),length=15) 
-# Create a heatmap of your genes using the entire training set.
-positive <- t(pos)
-negative <- t(neg)
-sample_names <- rownames(positive)
-annot <- data_frame(
-  Sample =sample_names, 
-  Group = c(rep('Disease', length(sample_names[grepl(pattern = '^D', sample_names)])),
-           rep('Control', length(sample_names[grepl(pattern = '^C', sample_names)])) )
-  ) %>%
-  mutate(Group = factor(Group))%>%
-  column_to_rownames('Sample')
-
+  column_to_rownames(var = 'bin') 
 ```
 
+```{r}
+# create a pheno var
+group <- data_frame(Sample = colnames(pos)) %>%
+  mutate(Status = if_else(grepl(pattern = '^D', x = Sample), 'Disease', 'Control')) %>%
+  pull(Status)
+```
+
+```{r}
+# use the edgeR package to do the Negative Binomial regression
+y <- DGEList(counts=pos,group=group)
+design <- model.matrix(~group)
+y <- estimateDisp(y,design)
+fit <- glmQLFit(y,design)
+qlf <- glmQLFTest(fit,coef=2)
+
+ret <- topTags(qlf, n = nrow(pos),  sort.by = "none")$table %>%
+  mutate(bin = as.numeric(rownames(.))) %>%
+  mutate(significance = if_else(FDR < 0.01, '***', ifelse(FDR < 0.05, '**', if_else(FDR < 0.1, '*', ''))))
+
+table(ret$significance) %>%
+  as.data.frame %>%
+  ggbarplot(x = 'Var1', y = 'Freq', label = T, fill = 'gray', color = '000')
+
+
+```
 

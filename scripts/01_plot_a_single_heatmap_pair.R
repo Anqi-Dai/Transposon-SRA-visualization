@@ -1,14 +1,14 @@
 # This script will plot a single clustered heatmap pair(positive and negative) using two input files, each has rows as bins and columns as samples.
 
-library(magick)
 library(tidyverse)
 library(pheatmap)
 library(gridExtra)
 
 # for the color palette 
 colGradient <- function( cols, length, cmax=255 )
-{ ramp <- colorRamp(cols)
-rgb( ramp(seq(0,1,length=length)), max=cmax )
+{ 
+  ramp <- colorRamp(cols)
+  rgb( ramp(seq(0,1,length=length)), max=cmax )
 }
 
 # prepare the count table to draw
@@ -29,12 +29,14 @@ prepare_table_for_heatmap <- function(TE_name, StrandNum){
 
 draw_clustered_heatmap <- function(TE_name, Num){
   
-
-  
   POS_table <- prepare_table_for_heatmap(TE_name, str_glue('Pos{Num}'))
   NEG_table <- prepare_table_for_heatmap(TE_name, str_glue('Neg{Num}'))
   
-  max_cnt <- max(max(POS_table), max(NEG_table)) 
+  DF <- Test
+  
+  all_table <- DF %>%
+    filter(TE == TE_name) %>%
+    dplyr::select(Sample, Status, bin, cnt = str_glue('Pos{Num}'))
   
   # the color scale for the heatmap
   yellow <- colGradient(c("#EBEBF3","#4C3C90"),length=9) 
@@ -44,8 +46,7 @@ draw_clustered_heatmap <- function(TE_name, Num){
   annotCol <- list(Status = c('#00468B', '#EC0000'))
   names(annotCol$Status) = c('Control','Huntingtons')
   
-  # breaks : which set the limit of the count and color mapping relationship
-  #breaks <- seq(0, max_cnt, length.out = 1+length(blue))
+
   
   # the df linking the sample and its corresponding group
   annot <- data_frame(
@@ -89,11 +90,11 @@ draw_clustered_heatmap <- function(TE_name, Num){
   return(ret)
 }
 
-#*********************
-#TE_name = 'ALU:1-312'
-#Num = 1
-#*********************
-#ret <- draw_clustered_heatmap(TE_name, Num)
+
+TE_name = 'ALU:1-312'
+Num = 1
+
+ret <- draw_clustered_heatmap(TE_name, Num)
 
 
 
