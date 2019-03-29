@@ -91,10 +91,10 @@ draw_clustered_heatmap <- function(TE_name, Num){
 }
 
 
-TE_name = 'ALU:1-312'
-Num = 1
-
-ret <- draw_clustered_heatmap(TE_name, Num)
+# TE_name = 'ALU:1-312'
+# Num = 1
+# 
+# ret <- draw_clustered_heatmap(TE_name, Num)
 
 
 

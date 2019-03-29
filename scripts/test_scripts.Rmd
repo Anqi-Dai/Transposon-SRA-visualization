@@ -51,3 +51,19 @@ table(ret$significance) %>%
 
 ```
 
+```{r}
+# format the fake data to be like the Test data
+list(pos, neg) %>%
+  map_dfc(., function(df) df %>%
+        rownames_to_column() %>%
+        rename(bin = rowname) %>%
+        mutate(bin = as.numeric(bin)) %>%
+        gather(key = Sample, value = cnt, ... = -bin)) %>%
+  dplyr::select(-bin1, -Sample1) %>%
+  rename(Pos1 = cnt, Neg1 = cnt1) %>%
+  mutate(Status = if_else(grepl(pattern = '^D', x = Sample), 'Huntingtons', 'Control'))  %>%
+  mutate(Status = factor(Status)) %>%
+  mutate(TE = 'TE_simulate') %>%
+  write_csv('../data/fake_data_real_format.csv')
+```
+

@@ -30,7 +30,7 @@ prepare_table_for_plotting <- function(TE_name, StrandNum) {
   defined_star_height <- ribbon_part %>%
     group_by(bin) %>%
     summarise(star_height = max(Median) ) %>%
-    summarise(star_height = median(star_height)*4) %>%
+    summarise(star_height = median(star_height)*2) %>%
     pull(star_height)
   
   star_position_part <-  ribbon_part %>%
@@ -79,10 +79,6 @@ draw_differential_line_plot <- function(TE_name, Num) {
   POS_table <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
   NEG_table <- prepare_table_for_plotting(TE_name, str_glue('Neg{Num}'))
 
-  # the max_cnt, the scale of the plot should be the max of the two quantile 3 times 1.2
-  max_q3 <-max(max(POS_table$quantile3), max(NEG_table$quantile3))
-  max_cnt <-  max_q3 * 1.2
-
   # make the differential line plot
   # for positive
   dl_pos <- ggplot(POS_table) + 
@@ -99,7 +95,7 @@ draw_differential_line_plot <- function(TE_name, Num) {
                    y=Median,
                    group=Status,
                    color=Status)) +
-    geom_text(aes(x=bin, y=star_height, label = significance),angle = 90, nudge_x = 0) +
+    geom_text(aes(x=bin, y=star_height, label = significance),angle = 90, nudge_x = 0.2) +
     labs(x = 'Bin',
          y = 'Positive',
          title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt differential lineplot'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt differential lineplot'), str_glue('{TE_name} any length differential lineplots')))) +
@@ -155,9 +151,9 @@ draw_differential_line_plot <- function(TE_name, Num) {
   }
 
 
-# test the function
-TE_name <- 'ALU:1-312'
-Num <- 1
-#test <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
-
-#draw_differential_line_plot(TE_name, Num) + ggsave('figs/test.line.jpg',  width = 20, height = 12, dpi = 300)
+# # test the function
+# TE_name <- 'TE_simulate'
+# Num <- 1
+# #test <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
+# 
+# draw_differential_line_plot(TE_name, Num) + ggsave('figs/000test.line.jpg',  width = 20, height = 12, dpi = 300)
