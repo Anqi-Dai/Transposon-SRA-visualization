@@ -1,0 +1,107 @@
+---
+title: "test on the new line plot"
+author: "Anqi Dai"
+date: "4/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(edgeR)
+library(ggpubr)
+```
+
+```{r data}
+Test <- read_csv('../data/testing_TE.csv') %>%
+  mutate(localPath = str_replace_all(Path, '/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/','../data/allTest/')) %>%
+  mutate(fileContent = map(localPath,  ~ read_tsv(., col_names = F, skip = 1))) %>%
+  unnest %>%
+  dplyr::select(-X1, -Path) %>%
+  rename(bin = X2,  
+         Pos1 = X3,
+         Neg1 = X4,
+         Pos2 = X5,
+         Neg2 = X6,
+         Pos3 = X7,
+         Neg3 = X8) 
+```
+
+```{r}
+prepare_table_for_plotting <- function(TE_name, Num, statusGroup) {
+  DF <- Test
+  
+  # TE_name <- 'ALU:1-312'
+  # TE_name <-'L1HS:1-6064'
+  # Num <- 1
+  # statusGroup <- 'Control'
+  
+  # only drawing the line plot of ONE status with both pos and neg lines on the same plot
+  all_table <- DF %>%
+    filter(Status == statusGroup) %>%
+    filter(TE == TE_name) %>%
+    dplyr::select(Sample, 
+                  Status, 
+                  bin, 
+                  pos_cnt = str_glue('Pos{Num}'), 
+                  neg_cnt = str_glue('Neg{Num}'))
+  
+  # the shaded area is the interquantile range
+  # the line(point) is showing the median
+  ribbon_part_pos <- all_table %>%
+    group_by(bin) %>%
+    summarise(Median = median(pos_cnt),
+              quantile1 = quantile(pos_cnt, 0.25),
+              quantile3 = quantile(pos_cnt, 0.75)) %>%
+    mutate(Strand = 'Positive')
+  
+  ribbon_part_neg <- all_table %>%
+    group_by(bin) %>%
+    summarise(Median = median(neg_cnt),
+              quantile1 = quantile(neg_cnt, 0.25),
+              quantile3 = quantile(neg_cnt, 0.75)) %>%
+    mutate(Strand = 'Negative')
+  
+  final <- bind_rows(ribbon_part_pos, ribbon_part_neg) %>%
+    mutate(Strand = factor(Strand))
+
+  return(final)
+}
+
+
+  
+```
+
+```{r}
+
+TE_name <-'L1HS:1-6064'
+Num <- 1
+statusGroup <- 'Huntingtons'
+
+prepare_table_for_plotting(TE_name, Num, statusGroup) %>%
+  ggplot() + 
+      geom_line(aes(x=bin,
+                  y=Median,
+                  group=Strand,
+                  color=Strand),lwd=1) +
+      geom_ribbon(aes(x=bin,
+                    ymin=quantile1,
+                    ymax=quantile3,
+                    group=Strand, 
+                    fill= Strand ),alpha=0.3) + 
+      labs(x = 'Bin',
+         title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt differential lineplot in {statusGroup}'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt differential lineplot in {statusGroup}'), str_glue('{TE_name} any length differential lineplots in {statusGroup}')))) +
+      theme_classic() +
+      scale_x_continuous( breaks = test$bin) +
+      scale_color_manual(values = c('#00468B', '#EC0000'))  +
+      scale_fill_manual(values = c('#00468B', '#EC0000'))  +
+      theme(legend.position='top', 
+          legend.justification='right',
+          legend.direction='horizontal') +
+      theme(axis.title.x=element_blank()) +
+      theme(text = element_text(size=25),
+          plot.margin = margin(0,20,0,20)) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10)) +
+    ggsave('../figs/00000.line.in {statusGroup}.jpg',  width = 20, height = 12, dpi = 300)
+```
+

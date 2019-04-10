@@ -2,6 +2,7 @@
 # make this a plotting a function
 library(tidyverse)
 library(edgeR)
+library(ggpubr)
 
 #########################################################################
 # the function to generate the table for plotting since the pos and neg have 
@@ -108,7 +109,7 @@ draw_differential_line_plot <- function(TE_name, Num) {
           legend.direction='horizontal') +
     theme(axis.title.x=element_blank()) +
     theme(text = element_text(size=25),
-          plot.margin = margin(20,20,20,20)) +
+          plot.margin = margin(0,20,0,20)) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10))
   
   ###########################################################################
@@ -140,7 +141,7 @@ draw_differential_line_plot <- function(TE_name, Num) {
           text = element_text(size=25),
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
-          plot.margin = margin(20,20,20,20)
+          plot.margin = margin(0,20,0,20)
          )  
    
   
@@ -151,9 +152,9 @@ draw_differential_line_plot <- function(TE_name, Num) {
   }
 
 
-# # test the function
-# TE_name <- 'TE_simulate'
-# Num <- 1
-# #test <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
-# 
-# draw_differential_line_plot(TE_name, Num) + ggsave('figs/000test.line.jpg',  width = 20, height = 12, dpi = 300)
+# test the function
+TE_name <- 'L1HS:1-6064'
+Num <- 1
+#test <- prepare_table_for_plotting(TE_name, str_glue('Pos{Num}'))
+
+draw_differential_line_plot(TE_name, Num) + ggsave('figs/000test.line.jpg',  width = 20, height = 12, dpi = 300)
