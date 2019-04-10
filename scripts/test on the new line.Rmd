@@ -68,17 +68,16 @@ prepare_table_for_plotting <- function(TE_name, Num, statusGroup) {
   return(final)
 }
 
-
-  
 ```
 
 ```{r}
 
-TE_name <-'L1HS:1-6064'
+TE_name <-'L1:1-5403'
 Num <- 1
-statusGroup <- 'Huntingtons'
+#statusGroup <- 'Control'
 
-prepare_table_for_plotting(TE_name, Num, statusGroup) %>%
+res <- map(c('Control','Huntingtons'), function(statusGroup){
+  ret = prepare_table_for_plotting(TE_name, Num, statusGroup) %>%
   ggplot() + 
       geom_line(aes(x=bin,
                   y=Median,
@@ -101,7 +100,11 @@ prepare_table_for_plotting(TE_name, Num, statusGroup) %>%
       theme(axis.title.x=element_blank()) +
       theme(text = element_text(size=25),
           plot.margin = margin(0,20,0,20)) +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10)) +
-    ggsave('../figs/00000.line.in {statusGroup}.jpg',  width = 20, height = 12, dpi = 300)
+      theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 10)) 
+})
+
+ggarrange(res[[1]], res[[2]], ncol = 2) +
+  ggsave(str_glue('../figs/0000000.{TE_name} {Num} line.jpg'), width = 40, height = 12, dpi = 300)
+
 ```
 
