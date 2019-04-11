@@ -1,0 +1,142 @@
+---
+title: "Sort out the line plot"
+author: "Anqi Dai"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+library(tidyverse)
+library(kableExtra)
+```
+
+## Input data format
+
+```{r}
+# showcase what the input data should be like
+read_csv('../data/testing_TE.csv') %>%
+  head() %>%
+  kable(caption = 'Sample format of a input file') %>%
+  kable_styling()
+```
+
+## Read the input test data and format it
+
+```{r}
+# when run on scc, don't need to generate the localPath, just read from the Path, 
+dat <- read_csv('../data/testing_TE.csv') %>%
+  mutate(localPath = str_replace_all(Path, '/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/','../data/allTest/')) %>%
+  mutate(fileContent = map(localPath,  ~ read_tsv(., col_names = F, skip = 1))) %>%
+  unnest %>%
+  dplyr::select(-X1, -Path) %>%
+  rename(bin = X2,  
+         Pos1 = X3,
+         Neg1 = X4,
+         Pos2 = X5,
+         Neg2 = X6,
+         Pos3 = X7,
+         Neg3 = X8) 
+```
+
+## Function to draw
+
+```{r}
+draw_line_plot <- function(TE_name, Num, statusGroup, outDir){
+  # Input: 
+  #   TE_name: the name of the TE 
+  #   Num: 1 for length 18-23nt; 2 for length 24-35nt; 3 for any length.
+  #   statusGroup: string of either 'Huntingtons' or 'Control'
+  #   outDir: the output directory for saving the pdf result
+  # Output:
+  #   A line plot of ONE status with both pos(red) and neg(blue) lines on the same plot
+  
+  all_table <- dat %>%
+    filter(Status == statusGroup) %>%
+    filter(TE == TE_name) %>%
+    dplyr::select(Sample, 
+                  Status, 
+                  bin, 
+                  pos_cnt = str_glue('Pos{Num}'), 
+                  neg_cnt = str_glue('Neg{Num}'))
+  
+  # the shaded area is the interquantile range
+  # the line(point) is showing the median
+  ribbon_part_pos <- all_table %>%
+    group_by(bin) %>%
+    summarise(Median = median(pos_cnt),
+              quantile1 = quantile(pos_cnt, 0.25),
+              quantile3 = quantile(pos_cnt, 0.75)) %>%
+    mutate(Strand = 'Positive')
+  
+  ribbon_part_neg <- all_table %>%
+    group_by(bin) %>%
+    summarise(Median = median(neg_cnt),
+              quantile1 = quantile(neg_cnt, 0.25),
+              quantile3 = quantile(neg_cnt, 0.75)) %>%
+    mutate(Strand = 'Negative')
+  
+  # the table for plotting
+  final <- bind_rows(ribbon_part_pos, ribbon_part_neg) %>%
+    mutate(Strand = factor(Strand))
+  
+  # plot
+  final %>%
+    ggplot() + 
+        geom_line(aes(x=bin,
+                      y=Median,
+                      group=Strand,
+                      color=Strand),lwd=1) +
+        geom_ribbon(aes(x=bin,
+                        ymin=quantile1,
+                        ymax=quantile3,
+                        group=Strand, 
+                        fill= Strand ),alpha=0.3) + 
+        labs(title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt differential lineplot in {statusGroup}'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt differential lineplot in {statusGroup}'), str_glue('{TE_name} any length differential lineplots in {statusGroup}')))) +
+        theme_classic() +
+        scale_x_continuous(breaks = final$bin) +
+        scale_color_manual(values = c('#00468B', '#EC0000'))  +
+        scale_fill_manual(values = c('#00468B', '#EC0000'))  +
+        theme(legend.position='top', 
+              legend.justification='right',
+              legend.direction='horizontal',
+              text = element_text(size=25),
+              plot.margin = margin(30,20,30,20),
+              axis.text.x = element_text(angle = 45, hjust = 1, size = 10)) +
+        ggsave(if_else(Num == 1, str_glue('{outDir}/{TE_name} length 18-23nt line plot in {statusGroup}.pdf'), if_else(Num == 2, str_glue('{outDir}/{TE_name} length 24-35nt line plot in {statusGroup}.pdf'), str_glue('{outDir}/{TE_name} any length line plot in {statusGroup}.pdf'))), 
+               device = 'pdf', 
+               width = 20, 
+               height = 12, 
+               dpi = 300)
+}
+```
+
+## Generate the parameters for running
+
+```{r}
+# generate the parameters for running
+TEs <- names(table(dat$TE))
+Nums <- seq(1,3)
+statusGroups <- names(table(dat$Status))
+outDir <- '../figs'
+
+input_params <- expand.grid(TEs, Nums, statusGroups, outDir) %>%
+  rename(TE_name = names(.)[1],
+         Num = names(.)[2],
+         statusGroup = names(.)[3],
+         outDir = names(.)[4])
+```
+
+## Running the plotting function
+
+```{r}
+ret <- pmap(input_params, function(TE_name, Num, statusGroup, outDir){
+  draw_line_plot(TE_name, Num, statusGroup, outDir)
+})
+
+```
+
