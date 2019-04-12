@@ -96,17 +96,18 @@ draw_line_plot <- function(TE_name, Num, statusGroup, outDir){
                         ymax=quantile3,
                         group=Strand, 
                         fill= Strand ),alpha=0.3) + 
-        labs(title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt differential lineplot in {statusGroup}'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt differential lineplot in {statusGroup}'), str_glue('{TE_name} any length differential lineplots in {statusGroup}')))) +
+        labs(title = if_else(Num == 1, str_glue('{TE_name} length 18-23nt line plot in {statusGroup}'), if_else(Num == 2, str_glue('{TE_name} length 24-35nt line plot in {statusGroup}'), str_glue('{TE_name} any length line plot in {statusGroup}')))) +
         theme_classic() +
-        scale_x_continuous(breaks = final$bin) +
+        #scale_x_continuous(breaks = final$bin) +
         scale_color_manual(values = c('#00468B', '#EC0000'))  +
         scale_fill_manual(values = c('#00468B', '#EC0000'))  +
         theme(legend.position='top', 
               legend.justification='right',
               legend.direction='horizontal',
               text = element_text(size=25),
+              axis.title.x=element_blank(),
               plot.margin = margin(30,20,30,20),
-              axis.text.x = element_text(angle = 45, hjust = 1, size = 10)) +
+              axis.text.x = element_text(size = 20)) +
         ggsave(if_else(Num == 1, str_glue('{outDir}/{TE_name} length 18-23nt line plot in {statusGroup}.pdf'), if_else(Num == 2, str_glue('{outDir}/{TE_name} length 24-35nt line plot in {statusGroup}.pdf'), str_glue('{outDir}/{TE_name} any length line plot in {statusGroup}.pdf'))), 
                device = 'pdf', 
                width = 20, 
