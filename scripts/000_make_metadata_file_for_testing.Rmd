@@ -41,3 +41,26 @@ res %>%
 
 ```
 
+```{r}
+# prepare all of the TEs of all of the samples
+TEs <- list.files('../data/allTest/C_0002_TE/')
+
+ret <-list.files('../data/allTest/')
+
+
+RET <- apply(expand.grid(ret, TEs), 1, paste, collapse="/")
+
+
+res <- data_frame(folderName = RET) %>%
+    separate(folderName, into = c('SampleFolder','TE'), sep = '/') %>%
+    mutate(Path = str_glue('/projectnb/lau-bumc/qichengm/projects/Lau_lab/human/HD_PD_project/miRNA/{SampleFolder}/{TE}'))  %>%
+    mutate(TE = str_replace_all(TE, '^TE@','')) %>%
+    mutate(Status = if_else(grepl(pattern = '^C', SampleFolder), 'Control', if_else(grepl(pattern = '^P', SampleFolder), 'Parkinsons','Huntingtons'))) %>%
+    mutate(Status = factor(Status))  %>%
+    mutate(Sample = str_replace_all(SampleFolder, '_TE$','')) %>%
+    dplyr::select(TE, Sample, Status, Path)
+
+res %>%
+  write_csv('../data/all_TEs_all_samples_data.csv')
+```
+
